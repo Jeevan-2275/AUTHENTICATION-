@@ -1,7 +1,5 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
-// import jwt from "jsonwebtoken";
-// import crypto from "crypto";
 
 const userSchema = new mongoose.Schema({
   name: String,
@@ -23,20 +21,36 @@ const userSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
- 
 
 userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) {
-      next();
-    }
-    this.password = await bcrypt.hash(this.password, 10);
-  });
-  
+  if (!this.isModified("password")) {
+    next();
+  }
+  this.password = await bcrypt.hash(this.password, 10);
+});
+
+userSchema.methods.comparePassword = async function (enterredPassword) {
+  return await bcrypt.compare(enterredPassword, this.password);
+};
 
 
-  userSchema.methods.comparePassword = async function (enterredPassword) {
-    return await bcrypt.compare(enterredPassword, this.password);
-  };
 
 
-  export const User = mongoose.model("User", userSchema);
+
+userSchema.methods.generateVerificationCode = function () {
+  function generateRandomFiveDigitNumber() {
+    const firstDigit = Math.floor(Math.random() * 9) + 1;
+    const remainingDigits = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, 0);
+
+    return parseInt(firstDigit + remainingDigits);
+  }
+  const verificationCode = generateRandomFiveDigitNumber();
+  this.verificationCode = verificationCode;
+  this.verificationCodeExpire = Date.now() + 10 * 60 * 1000;
+
+  return verificationCode;
+};
+
+export const User = mongoose.model("User", userSchema);
